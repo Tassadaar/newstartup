@@ -478,29 +478,29 @@ def compute_band_powers(
         # 10*log10(power). Guard against log(0).
         bp = 10.0 * np.log10(np.maximum(bp, np.finfo(float).tiny))
 
-    return bp, labels
+    return bp.mean(axis=0), labels
 
 #######
 # Example streaming from a single board
 ######
-if __name__ == "__main__":
-    import time
-
-    board_id_cyton = BoardIds.CYTON_BOARD.value
-
-    brainflow_board = BrainFlowBoard(board_id=board_id_cyton)
-
-    brainflow_board.setup()
-
-    # Stream from both boards for 5 seconds
-    time.sleep(5)
-
-    # Retrieve and print data from the second board
-    data = brainflow_board.get_board_data()
-    print(f"Data from brainflow_board: {data}")
-
-    # Stop the streaming and release the sessions for both boards
-    brainflow_board.stop()
+# if __name__ == "__main__":
+#     import time
+#
+#     board_id_cyton = BoardIds.CYTON_BOARD.value
+#
+#     brainflow_board = BrainFlowBoard(board_id=board_id_cyton)
+#
+#     brainflow_board.setup()
+#
+#     # Stream from both boards for 5 seconds
+#     time.sleep(5)
+#
+#     # Retrieve and print data from the second board
+#     data = brainflow_board.get_board_data()
+#     print(f"Data from brainflow_board: {data}")
+#
+#     # Stop the streaming and release the sessions for both boards
+#     brainflow_board.stop()
 
 ############
 # Example streaming from two boards simultaneously
