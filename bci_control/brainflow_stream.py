@@ -1,8 +1,5 @@
-import brainflow
-import numpy as np
-from brainflow.board_shim import BoardShim, BrainFlowInputParams, BrainFlowError, BoardIds
 import serial.tools.list_ports
-from scipy.signal import welch
+from brainflow.board_shim import BoardShim, BrainFlowInputParams, BrainFlowError, BoardIds
 
 
 class BrainFlowBoard:
@@ -140,11 +137,8 @@ class BrainFlowBoard:
                 board.prepare_session()
                 board.release_session()
 
-                device_info = {
-                    'port': port.device,
-                    'serial_number': port.serial_number,
-                    'description': port.description
-                }
+                device_info = {'port': port.device, 'serial_number': port.serial_number,
+                    'description': port.description}
                 print(f"Compatible device found: Serial Number: {port.serial_number}, Description: {port.description}")
                 compatible_ports.append(device_info)
             except BrainFlowError:
@@ -348,26 +342,16 @@ class BrainFlowBoard:
 #             band_powers[band] = res.mean()
 #
 #     return band_powers
-import numpy as np
-from scipy.signal import welch
-
-
 
 import numpy as np
 from scipy.signal import welch
 from typing import Dict, Tuple, Sequence, Optional
 
-def compute_band_powers(
-        data: np.ndarray,
-        sf: float,
-        bands: Dict[str, Tuple[float, float]] = None,
-        window_sec: Optional[float] = None,
-        overlap: float = 0.5,
-        detrend: str = "constant",
-        relative: bool = False,
-        return_log: bool = False,
-        total_band: Optional[Tuple[float, float]] = None,
-) -> Tuple[np.ndarray, Sequence[str]]:
+
+def compute_band_powers(data: np.ndarray, sf: float, bands: Dict[str, Tuple[float, float]] = None,
+        window_sec: Optional[float] = None, overlap: float = 0.5, detrend: str = "constant", relative: bool = False,
+        return_log: bool = False, total_band: Optional[Tuple[float, float]] = None, ) -> Tuple[
+    np.ndarray, Sequence[str]]:
     """
     Compute bandpowers for data of shape (n_channels, n_samples).
 
@@ -416,13 +400,8 @@ def compute_band_powers(
     n_channels, n_samples = data.shape
 
     if bands is None:
-        bands = {
-            "delta": (1.0, 4.0),
-            "theta": (4.0, 8.0),
-            "alpha": (8.0, 13.0),
-            "beta":  (13.0, 30.0),
-            "gamma": (30.0, 80.0),
-        }
+        bands = {"delta": (1.0, 4.0), "theta": (4.0, 8.0), "alpha": (8.0, 13.0), "beta": (13.0, 30.0),
+            "gamma": (30.0, 80.0), }
 
     # Welch parameters
     if window_sec is None:
@@ -433,17 +412,8 @@ def compute_band_powers(
     noverlap = int(round(nperseg * overlap)) if 0 <= overlap < 1 else 0
 
     # Compute PSD: Pxx units are V^2/Hz if input is in volts
-    freqs, Pxx = welch(
-        data,
-        fs=sf,
-        nperseg=nperseg,
-        noverlap=noverlap,
-        detrend=detrend,
-        axis=-1,
-        return_onesided=True,
-        scaling="density",
-        average="mean",
-    )
+    freqs, Pxx = welch(data, fs=sf, nperseg=nperseg, noverlap=noverlap, detrend=detrend, axis=-1, return_onesided=True,
+        scaling="density", average="mean", )
     # Pxx shape: (n_channels, n_freqs)
     # Integrate PSD over each band
     labels = list(bands.keys())

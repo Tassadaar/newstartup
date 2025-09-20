@@ -1,7 +1,10 @@
 import sys
 
+import numpy as np
 import pygame
+from brainflow import DataFilter, BoardIds, BoardShim, LogLevels
 
+from bci_control.brainflow_stream import compute_band_powers, BrainFlowBoard
 from game.ball import START_SPEED, Ball
 from game.brick import Brick
 from game.constants import *
@@ -22,8 +25,11 @@ class Game:
         self.start_time = pygame.time.get_ticks()
         self.final_time = 0
         self.best_time = self._load_best_time()
-
         self.setup_objects()
+
+        self.increasing = False
+        self.ratio = 0.0
+        self.max_ratio = 0.0
 
     def setup_objects(self):
         self.paddle = Paddle(SCREEN_HEIGHT - 40, SCREEN_WIDTH, PADDLE_HEIGHT, WHITE)
@@ -45,12 +51,40 @@ class Game:
                 bricks.append(Brick(brick_x, brick_y, brick_width, brick_height, color, intensity))
         return bricks
 
-    def run(self):
+    def remove_dc_offset(self, data):
+        return data[1:4, :] - np.mean(data[1:4, :], axis=1, keepdims=True)
 
+    def run(self):
         self.running = True
+        self.max_ratio = 0.0
+        board_id = BoardIds.CYTON_BOARD.value
+        board = BrainFlowBoard(board_id=board_id, serial_port="/dev/cu.usbserial-DM01IK21")
+        board.setup()
+        board_descr = BoardShim.get_board_descr(board_id)
+        sampling_rate = int(board_descr['sampling_rate'])
+        BoardShim.log_message(LogLevels.LEVEL_INFO.value, 'start sleeping in the main thread')
+
         while self.running:
             self._handle_events()
+            nfft = DataFilter.get_nearest_power_of_two(sampling_rate)
+            data = board.get_current_board_data(num_samples=500)
 
+            if data is not None and len(data) > 0:
+                try:
+                    eeg_data = data
+
+                    eeg_data = self.remove_dc_offset(eeg_data)
+                    band_powers = compute_band_powers(eeg_data, sampling_rate, relative=True)
+                    powers, _ = band_powers
+
+                    self.ratio = powers[2] / powers[3]
+                except Exception as e:
+                    pass
+            if self.ratio > self.max_ratio:
+                self.max_ratio = self.ratio
+                self.ball.increase_speed()
+            elif self.ratio < self.max_ratio:
+                self.ball.decrease_speed()
             if self.state == 'playing':
                 self._update()
                 self._draw()
@@ -68,11 +102,7 @@ class Game:
             if self.state == 'playing':
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
                     self.ball.increase_speed()
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:
-                    self.ball.decrease_speed()
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.ball.light_force()
-
+                  # elif event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:  #     self.ball.decrease_speed()  # elif event.type == pygame.MOUSEBUTTONDOWN:  #     self.ball.light_force()
 
     def _update(self):
 
