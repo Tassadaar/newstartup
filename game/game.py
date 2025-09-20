@@ -64,6 +64,7 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            # TODO: map this to p300 instead
             if self.state == 'playing':
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
                     self.ball.increase_speed()
