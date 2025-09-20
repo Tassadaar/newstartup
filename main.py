@@ -1,9 +1,12 @@
+import threading
 import time
 
 import numpy as np
+import pygame
 from brainflow import LogLevels, DataFilter
 from brainflow.board_shim import BoardIds, BoardShim
 
+from BLEDataCollector.BLEDataCollector import BLEDataCollector
 from bci_control.brainflow_stream import BrainFlowBoard, compute_band_powers
 from game.game import Game
 
@@ -42,6 +45,6 @@ def main():
     # board.stop_stream()  # board.release_session()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     game = Game()
     game.run()
