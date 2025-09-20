@@ -1,6 +1,9 @@
 import brainflow
+import numpy as np
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BrainFlowError, BoardIds
 import serial.tools.list_ports
+from scipy.signal import welch
+
 
 class BrainFlowBoard:
     """
@@ -36,7 +39,7 @@ class BrainFlowBoard:
         """
         self.instance_id = BrainFlowBoard._id_counter  # Unique identifier for each instance
         BrainFlowBoard._id_counter += 1
-        
+
         self.board_id = board_id
         self.serial_port = serial_port
         self.master_board = master_board
@@ -72,7 +75,7 @@ class BrainFlowBoard:
         self.board = None
         self.session_prepared = False
         self.streaming = False
-    
+
     def __getattr__(self, name):
         """
         Delegates attribute access to the BoardShim instance if the attribute is not found in the current instance.
@@ -91,7 +94,7 @@ class BrainFlowBoard:
             return getattr(self.board, name)
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-    
+
     def get_board_info(self):
         """
         Retrieves the EEG channels and sampling rate for the board. Uses the master board if provided.
@@ -102,15 +105,17 @@ class BrainFlowBoard:
         Raises:
             ValueError: If a master_board is provided for a board that doesn't support it.
         """
-        if self.board_id not in [BoardIds.PLAYBACK_FILE_BOARD.value, BoardIds.SYNTHETIC_BOARD.value] and self.master_board:
-            raise ValueError(f"Master board is only used for PLAYBACK_FILE_BOARD (-3) and SYNTHETIC_BOARD (-1). But {self.board_id} was provided.")
+        if self.board_id not in [BoardIds.PLAYBACK_FILE_BOARD.value,
+                                 BoardIds.SYNTHETIC_BOARD.value] and self.master_board:
+            raise ValueError(
+                f"Master board is only used for PLAYBACK_FILE_BOARD (-3) and SYNTHETIC_BOARD (-1). But {self.board_id} was provided.")
 
         board_to_use = self.master_board if self.master_board is not None else self.board_id
         board_descr = BoardShim.get_board_descr(board_to_use)
-        
+
         eeg_channels = board_descr.get("eeg_channels", [])
         sampling_rate = BoardShim.get_sampling_rate(board_to_use)
-        
+
         return eeg_channels, sampling_rate
 
     def find_device_ports(self):
@@ -134,7 +139,7 @@ class BrainFlowBoard:
                 board = BoardShim(self.board_id, self.params)
                 board.prepare_session()
                 board.release_session()
-                
+
                 device_info = {
                     'port': port.device,
                     'serial_number': port.serial_number,
@@ -144,10 +149,10 @@ class BrainFlowBoard:
                 compatible_ports.append(device_info)
             except BrainFlowError:
                 continue
-        
+
         if not compatible_ports:
             print(f"No compatible BrainFlow devices found.")
-        
+
         BoardShim.enable_board_logger()
         return compatible_ports
 
@@ -169,8 +174,8 @@ class BrainFlowBoard:
                 print("No compatible device found. Setup failed.")
                 return
         elif self.serial_port is None and self.master_board is not None:
-            self.serial_port = '' 
-        
+            self.serial_port = ''
+
         self.params.serial_port = self.serial_port
         self.board = BoardShim(self.board_id, self.params)
         try:
@@ -201,7 +206,7 @@ class BrainFlowBoard:
             int: The sampling rate of the BrainFlow board.
         """
         return self.sampling_rate
-    
+
     def is_streaming(self):
         """
         Checks if the BrainFlow board is currently streaming data.
@@ -210,7 +215,7 @@ class BrainFlowBoard:
             bool: True if the board is streaming, False otherwise.
         """
         return self.streaming
-    
+
     def get_board_name(self):
         """
         Retrieves the name of the BrainFlow board.
@@ -219,7 +224,7 @@ class BrainFlowBoard:
             str: The name of the board, useful for logging or display purposes.
         """
         return self.name
-    
+
     def get_board_data(self):
         """
         Retrieves all accumulated data from the BrainFlow board and clears it from the buffer.
@@ -288,7 +293,7 @@ class BrainFlowBoard:
                     print(f"[{self.name}, {self.serial_port}] Session released.")
         except BrainFlowError as e:
             if "BOARD_NOT_CREATED_ERROR:15" not in str(e):
-                print(f"[{self.name}, {self.serial_port}] Error stopping board: {e}")        
+                print(f"[{self.name}, {self.serial_port}] Error stopping board: {e}")
 
     def __del__(self):
         """
@@ -298,6 +303,182 @@ class BrainFlowBoard:
         self.stop()
 
 
+# def compute_band_powers(eeg_data, sfreq, bands=None, nperseg=1024):
+#     """
+#     Compute band powers from EEG data using Welch's method.
+#
+#     Parameters
+#     ----------
+#     eeg_data : ndarray
+#         EEG signal, shape (n_channels, n_samples).
+#     sfreq : float
+#         Sampling frequency in Hz.
+#     bands : dict, optional
+#         Frequency bands as {"band": (low, high)} in Hz.
+#         Defaults to standard EEG bands.
+#     nperseg : int, optional
+#         Length of each segment for Welch PSD.
+#
+#     Returns
+#     -------
+#     band_powers : dict
+#         Dictionary with keys = band names, values = array of shape (n_channels,)
+#         containing average band power for each channel.
+#     """
+#     if bands is None:
+#         bands = {
+#             "delta": (1, 4),
+#             "theta": (4, 8),
+#             "alpha": (8, 12),
+#             "beta": (12, 30),
+#             "gamma": (30, 100),
+#         }
+#
+#     n_channels = eeg_data.shape[0]
+#     band_powers = {band: 0.0 for band in bands}
+#
+#     # Compute PSD per channel
+#     for ch in range(n_channels):
+#         freqs, psd = welch(eeg_data[ch], sfreq, nperseg=nperseg)
+#
+#         for band, (low, high) in bands.items():
+#             idx = np.logical_and(freqs >= low, freqs <= high)
+#             # print(f"{band=}, {idx=}")
+#             res = np.trapezoid(psd[idx], freqs[idx])  # integrate power
+#             band_powers[band] = res.mean()
+#
+#     return band_powers
+import numpy as np
+from scipy.signal import welch
+
+
+
+import numpy as np
+from scipy.signal import welch
+from typing import Dict, Tuple, Sequence, Optional
+
+def compute_band_powers(
+        data: np.ndarray,
+        sf: float,
+        bands: Dict[str, Tuple[float, float]] = None,
+        window_sec: Optional[float] = None,
+        overlap: float = 0.5,
+        detrend: str = "constant",
+        relative: bool = False,
+        return_log: bool = False,
+        total_band: Optional[Tuple[float, float]] = None,
+) -> Tuple[np.ndarray, Sequence[str]]:
+    """
+    Compute bandpowers for data of shape (n_channels, n_samples).
+
+    Parameters
+    ----------
+    data : np.ndarray
+        EEG/MEG/LFP data, shape (n_channels, n_samples).
+    sf : float
+        Sampling frequency in Hz.
+    bands : dict[str, (float, float)], optional
+        Mapping of band name to (low, high) in Hz.
+        Default: common EEG bands.
+    window_sec : float, optional
+        Welch window length in seconds. If None, picks a good default:
+        min(4 s, n_samples/sf), but at least 1 s.
+    overlap : float
+        Fractional overlap between segments in Welch. In [0, 1). Default 0.5.
+    detrend : {"constant", "linear", None}
+        Detrending applied before Welch.
+    relative : bool
+        If True, divide each bandpower by total power in `total_band`
+        (or by the full [0, sf/2) range if total_band is None).
+    return_log : bool
+        If True, return 10*log10(power) in dB (applied after relative if used).
+    total_band : (float, float) | None
+        Frequency range for the denominator when `relative=True`.
+        If None and `relative=True`, uses [0, sf/2).
+
+    Returns
+    -------
+    bp : np.ndarray
+        Bandpowers, shape (n_channels, n_bands), in V^2 if absolute or unitless if relative.
+        If return_log=True, units are dB.
+    labels : list[str]
+        Band labels in the same order as columns of `bp`.
+
+    Notes
+    -----
+    - Welch PSD is computed along the last axis (samples).
+    - Integration uses the trapezoidal rule over the PSD.
+    - If a band has no frequency bins (e.g., too narrow vs. resolution),
+      the power for that band is set to 0.
+    """
+    if data.ndim != 2:
+        raise ValueError("`data` must be 2D with shape (n_channels, n_samples).")
+    n_channels, n_samples = data.shape
+
+    if bands is None:
+        bands = {
+            "delta": (1.0, 4.0),
+            "theta": (4.0, 8.0),
+            "alpha": (8.0, 13.0),
+            "beta":  (13.0, 30.0),
+            "gamma": (30.0, 80.0),
+        }
+
+    # Welch parameters
+    if window_sec is None:
+        # choose up to 4 seconds, but no more than data length, and at least 1 second
+        window_sec = max(1.0, min(4.0, n_samples / sf))
+    nperseg = int(round(window_sec * sf))
+    nperseg = max(8, min(nperseg, n_samples))  # guardrails
+    noverlap = int(round(nperseg * overlap)) if 0 <= overlap < 1 else 0
+
+    # Compute PSD: Pxx units are V^2/Hz if input is in volts
+    freqs, Pxx = welch(
+        data,
+        fs=sf,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        detrend=detrend,
+        axis=-1,
+        return_onesided=True,
+        scaling="density",
+        average="mean",
+    )
+    # Pxx shape: (n_channels, n_freqs)
+    # Integrate PSD over each band
+    labels = list(bands.keys())
+    bp = np.zeros((n_channels, len(labels)), dtype=float)
+
+    for j, (lo, hi) in enumerate(bands.values()):
+        if hi <= lo:
+            raise ValueError(f"Invalid band {labels[j]} with lo>=hi: {(lo, hi)}")
+        idx = np.logical_and(freqs >= lo, freqs < hi)
+        if not np.any(idx):
+            bp[:, j] = 0.0
+        else:
+            bp[:, j] = np.trapz(Pxx[:, idx], freqs[idx], axis=-1)
+
+    # Relative power normalization if requested
+    if relative:
+        if total_band is None:
+            lo_tot, hi_tot = (0.0, sf / 2.0 - 1e-12)  # upper open interval
+        else:
+            lo_tot, hi_tot = total_band
+            if hi_tot <= lo_tot:
+                raise ValueError(f"Invalid total_band with lo>=hi: {total_band}")
+        idx_tot = np.logical_and(freqs >= lo_tot, freqs < hi_tot)
+        if not np.any(idx_tot):
+            raise ValueError("total_band does not include any frequency bins; increase window length or adjust band.")
+        total_power = np.trapz(Pxx[:, idx_tot], freqs[idx_tot], axis=-1)  # (n_channels,)
+        # Avoid divide by zero
+        total_power = np.where(total_power <= 0, np.nan, total_power)
+        bp = bp / total_power[:, None]
+
+    if return_log:
+        # 10*log10(power). Guard against log(0).
+        bp = 10.0 * np.log10(np.maximum(bp, np.finfo(float).tiny))
+
+    return bp, labels
 
 #######
 # Example streaming from a single board
@@ -320,7 +501,6 @@ if __name__ == "__main__":
 
     # Stop the streaming and release the sessions for both boards
     brainflow_board.stop()
-
 
 ############
 # Example streaming from two boards simultaneously
@@ -374,7 +554,7 @@ if __name__ == "__main__":
 #     if len(compatible_ports) >= 2:
 #         serial_port_1 = compatible_ports[0]['port']
 #         serial_port_2 = compatible_ports[1]['port']
-        
+
 #         # Instantiate BrainFlowBoardSetup for the first board
 #         brainflow_setup_1 = BrainFlowBoardSetup(board_id=board_id_cyton, serial_port=serial_port_1)
 
