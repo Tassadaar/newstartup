@@ -2,7 +2,7 @@ import brainflow
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BrainFlowError, BoardIds
 import serial.tools.list_ports
 
-class BrainFlowBoardSetup:
+class BrainFlowBoard:
     """
     A class to manage the setup, configuration, and control of a BrainFlow board.
     This class provides methods for initializing, configuring, and streaming data from the board.
@@ -34,16 +34,16 @@ class BrainFlowBoardSetup:
             name (str, optional): A user-friendly name or identifier for this instance. Defaults to 'Board X'.
             **kwargs: Additional keyword arguments to be set as attributes on the BrainFlowInputParams instance.
         """
-        self.instance_id = BrainFlowBoardSetup._id_counter  # Unique identifier for each instance
-        BrainFlowBoardSetup._id_counter += 1
+        self.instance_id = BrainFlowBoard._id_counter  # Unique identifier for each instance
+        BrainFlowBoard._id_counter += 1
         
         self.board_id = board_id
         self.serial_port = serial_port
         self.master_board = master_board
 
         # Assign default name if not provided, based on the class-level ID counter
-        self.name = name or f"Board {BrainFlowBoardSetup._id_counter}"
-        BrainFlowBoardSetup._id_counter += 1
+        self.name = name or f"Board {BrainFlowBoard._id_counter}"
+        BrainFlowBoard._id_counter += 1
 
         # Initialize BrainFlow input parameters
         self.params = BrainFlowInputParams()
@@ -307,7 +307,7 @@ if __name__ == "__main__":
 
     board_id_cyton = BoardIds.CYTON_BOARD.value
 
-    brainflow_board = BrainFlowBoardSetup(board_id=board_id_cyton)
+    brainflow_board = BrainFlowBoard(board_id=board_id_cyton)
 
     brainflow_board.setup()
 
