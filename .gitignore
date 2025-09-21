@@ -2,3 +2,4 @@
 .idea
 game/__pycache__/*
 bci_control/__pycache__/*
+*.pptx
