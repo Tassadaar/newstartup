@@ -1,12 +1,9 @@
-import threading
 import time
 
 import numpy as np
-import pygame
 from brainflow import LogLevels, DataFilter
 from brainflow.board_shim import BoardIds, BoardShim
 
-from BLEDataCollector.BLEDataCollector import BLEDataCollector
 from bci_control.brainflow_stream import BrainFlowBoard, compute_band_powers
 from game.game import Game
 
@@ -35,7 +32,7 @@ def main():
         band_powers = compute_band_powers(eeg_data, sampling_rate, relative=True)
         powers, _ = band_powers
 
-        ratio = powers[2] / powers[3]
+        ratio = powers[3] / powers[2]
         if ratio > max_ratio:
             max_ratio = ratio
             increasing = True

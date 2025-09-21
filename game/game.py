@@ -123,7 +123,7 @@ class Game:
         """
         print("BCI processing thread started.")
         while not self.bci_thread_stop_event.is_set():
-            sampling_rate = 64
+            sampling_rate = 256
             data = self.collector.get_current_data(num_samples=3200)
 
             if data and data[0]:
@@ -134,7 +134,7 @@ class Game:
                     powers, _ = band_powers
 
                     if powers[3] > 0:
-                        self.game_ratio = powers[2] / powers[3]
+                        self.game_ratio = powers[3] / powers[2]
                 except Exception as e:
                     print(f"Error computing in-game ratio: {e}")
 
@@ -163,14 +163,14 @@ class Game:
             return
 
         try:
-            sampling_rate = 64
+            sampling_rate = 256
             # NOTE: Using both channels for calibration as in original code
             eeg_data = self.remove_dc_offset([self.calibration_data_a[-3200:], self.calibration_data_b[-3200:]])
             band_powers = compute_band_powers(eeg_data, sampling_rate, relative=True)
             powers, _ = band_powers
 
             if powers[3] > 0:
-                self.calibrated_ratio = powers[2] / powers[3]
+                self.calibrated_ratio = powers[3] / powers[2]
             else:
                 self.calibrated_ratio = 1.0
 

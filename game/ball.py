@@ -7,8 +7,8 @@ from game.constants import SCREEN_WIDTH
 from game.game_object import GameObject
 
 MAX_BALL_SPEED = 25
-START_SPEED = 7
-MIN_BALL_SPEED = 5
+START_SPEED = 14
+MIN_BALL_SPEED = 10
 
 
 class Ball(GameObject):
