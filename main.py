@@ -32,7 +32,7 @@ def main():
         band_powers = compute_band_powers(eeg_data, sampling_rate, relative=True)
         powers, _ = band_powers
 
-        ratio = powers[2] / powers[3]
+        ratio = powers[3] / powers[2]
         if ratio > max_ratio:
             max_ratio = ratio
             increasing = True
@@ -42,6 +42,6 @@ def main():
     # board.stop_stream()  # board.release_session()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     game = Game()
     game.run()

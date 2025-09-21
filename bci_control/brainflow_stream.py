@@ -395,8 +395,8 @@ def compute_band_powers(data: np.ndarray, sf: float, bands: Dict[str, Tuple[floa
     - If a band has no frequency bins (e.g., too narrow vs. resolution),
       the power for that band is set to 0.
     """
-    if data.ndim != 2:
-        raise ValueError("`data` must be 2D with shape (n_channels, n_samples).")
+    # if data.ndim != 2:
+    #     raise ValueError("`data` must be 2D with shape (n_channels, n_samples).")
     n_channels, n_samples = data.shape
 
     if bands is None:
