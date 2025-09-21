@@ -1,2 +1,4 @@
 .venv/
 .idea
+game/__pycache__/*
+bci_control/__pycache__/*

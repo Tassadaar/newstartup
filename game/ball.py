@@ -7,8 +7,8 @@ from game.constants import SCREEN_WIDTH
 from game.game_object import GameObject
 
 MAX_BALL_SPEED = 25
-START_SPEED = 7
-MIN_BALL_SPEED = 5
+START_SPEED = 14
+MIN_BALL_SPEED = 10
 
 
 class Ball(GameObject):
@@ -42,9 +42,11 @@ class Ball(GameObject):
     def increase_speed(self):
         if self.speed <= MAX_BALL_SPEED:
             self.speed += 1
+            print(f"Speed increased to {self.speed}")
     def decrease_speed(self):
         if self.speed >= MIN_BALL_SPEED:
             self.speed -= 1
+            print(f"Speed decreased to {self.speed}")
 
     def light_force(self):
         self.direction *= -1
